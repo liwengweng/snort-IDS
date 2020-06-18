@@ -1,0 +1,106 @@
+前端代码：
+<div id="out" align="center">
+ <div id="main" style="width: 800px;height:400px;"></div>
+ </div>
+        <script type="text/javascript">         
+     // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+        function hrFun(param) {
+            myChart.setOption({
+            	  title: {
+            	        text: 'ip数据包的上层协议饼图',
+            	       
+            	        left: 'center'
+            	    },
+            	    tooltip: {
+            	        trigger: 'item',
+            	        formatter: '{a} <br/>{b} : {c} ({d}%)'
+            	    },
+            	    legend: {
+            	        orient: 'vertical',
+            	        left: 'left',
+            	        data: ['ICMP', 'TCP', 'UDP']
+            	    },
+                series: [{
+                    name: '访问来源',
+                    type: 'pie',
+                    radius: '55%',
+                    center: ['50%', '60%'],
+                    data: []
+                }]
+            });
+            myChart.showLoading(); //数据加载完之前先显示一段简单的loading动画
+           
+            var nums = [];//类别数组（用于存放饼图的类别）
+            $.ajax({
+                type: 'post',
+                url: 'dataservlet', //请求数据的地址
+                dataType: "json", //返回数据形式为json
+                success: function(result) {
+                    //请求成功时执行该函数内容，result即为服务器返回的json对象
+                    
+                   for(var i=0;i<result.length;i++){
+                	 	if(result[i].name=="1")
+                		   result[i].name="ICMP";
+                	   else if(result[i].name=="6")
+                		   result[i].name="TCP";
+                	   else if(result[i].name=="17")
+                		result[i].name="UDP";
+            
+                   	nums.push({
+                            name: result[i].name,
+                            value: result[i].num
+                        });
+                    }
+                    myChart.hideLoading(); //隐藏加载动画
+                    myChart.setOption({ //加载数据图表                
+                       
+                        series: [{
+                            data: nums
+                        }]
+                    });
+                },
+                error: function(errorMsg) {
+                    //请求失败时执行该函数
+                    alert("图表请求数据失败!");
+                    myChart.hideLoading();
+                }
+            });             
+       }
+        hrFun();
+    </script>
+    
+    后台servlet：
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// TODO Auto-generated method stub
+		try {
+			String sqlSearch=null;
+			sqlSearch="select ip_proto as name,count(sid) as num  from iphdr group by ip_proto order by num desc;";
+			//sqlSearch="select * from it";
+			ResultSet rs=null;
+			rs=DbUtils.excuteQueryt(sqlSearch);
+			ResultSetMetaData metaData =  rs.getMetaData();  
+	        int columnCount= metaData.getColumnCount();   
+	        
+	        JSONArray array = new JSONArray();
+	        while(rs.next()){
+	         JSONObject jsonObj = new JSONObject();       
+	         for(int i = 1; i <= columnCount;i++)  
+	          {  
+	           String columnName = metaData.getColumnLabel(i);  
+	           String value =rs.getString(columnName);  
+	           jsonObj.put(columnName, value);  
+	          }  
+	          array.put(jsonObj);  
+	        }
+	        //System.out.println("转换JSON数据：");  
+	        //System.out.println(array.toString());  
+	        DbUtils.close();
+	        response.setContentType("text/html; charset=utf-8");
+	        response.getWriter().write(array.toString());
+	        
+	    } catch (Exception e) {
+
+	        e.printStackTrace();// TODO: handle exception
+	    }     
+	}
