@@ -1,0 +1,34 @@
+protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// TODO Auto-generated method stub
+		try {
+			String sqlSearch=null;
+			sqlSearch="select td.tdate as date,IFNULL(count(timestamp),0) as num from (select timestamp from event,iphdr where event.cid = iphdr.cid and  event.sid = iphdr.sid) tt right join (select DATE_SUB(CURDATE(), INTERVAL n.i DAY) as tdate from num   n) td on date_format(timestamp ,'%Y-%m-%d' )=td.tdate   group by td.tdate" ;
+			//sqlSearch="select * from it";
+			ResultSet rs=null;
+			rs=DbUtils.excuteQueryt(sqlSearch);
+			ResultSetMetaData metaData =  rs.getMetaData();  
+	        int columnCount= metaData.getColumnCount();   
+	        
+	        JSONArray array = new JSONArray();
+	        while(rs.next()){
+	         JSONObject jsonObj = new JSONObject();       
+	         for(int i = 1; i <= columnCount;i++)  
+	          {  
+	           String columnName = metaData.getColumnLabel(i);  
+	           String value =rs.getString(columnName);  
+	           jsonObj.put(columnName, value);  
+	          }  
+	          array.put(jsonObj);  
+	        }
+	       // System.out.println("转换JSON数据：");  
+	       // System.out.println(array.toString());  
+	        DbUtils.close();
+	        response.setContentType("text/html; charset=utf-8");
+	        response.getWriter().write(array.toString());
+	        
+	    } catch (Exception e) {
+
+	        e.printStackTrace();// TODO: handle exception
+	    }     
+	}
+	
